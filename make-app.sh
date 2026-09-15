@@ -1,0 +1,75 @@
+#!/bin/bash
+# Wraps the built executable in a real .app bundle, so it gets a Dock icon,
+# proper focus behaviour, and can be double-clicked like anything else.
+set -euo pipefail
+
+cd "$(dirname "$0")"
+CONFIG="${1:-release}"
+
+swift build -c "$CONFIG"
+BIN="$(swift build -c "$CONFIG" --show-bin-path)/Flip"
+
+# Recompose the icon if the artwork is newer than the built .icns. Building
+# without artwork is fine — the app just takes the generic icon.
+ICON_KEYS=""
+ART=""
+for candidate in Icon/source.png Icon/icon.png; do
+    [ -f "$candidate" ] && ART="$candidate" && break
+done
+if [ -n "$ART" ]; then
+    if [ ! -f Resources/AppIcon.icns ] || [ "$ART" -nt Resources/AppIcon.icns ]; then
+        swift Tools/make-icon.swift "$ART" Resources/AppIcon.icns
+    fi
+    ICON_KEYS='    <key>CFBundleIconFile</key>          <string>AppIcon</string>
+    <key>CFBundleIconName</key>          <string>AppIcon</string>'
+fi
+
+APP="build/re-Flip.app"
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$BIN" "$APP/Contents/MacOS/re-Flip"
+[ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+
+# The panel grain, as SwiftPM's generated resource bundle. It has to land in
+# Contents/Resources specifically: `Bundle.module` finds it by looking beside
+# Bundle.main.resourceURL, and nowhere else in a .app would be on that path.
+BUNDLE="$(dirname "$BIN")/Flip_Flip.bundle"
+[ -d "$BUNDLE" ] && cp -R "$BUNDLE" "$APP/Contents/Resources/"
+
+# No '$' or backticks in the body, so an unquoted heredoc is safe and lets the
+# icon keys drop in.
+cat > "$APP/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>              <string>re-Flip</string>
+    <key>CFBundleDisplayName</key>       <string>re-Flip</string>
+    <key>CFBundleExecutable</key>        <string>re-Flip</string>
+    <!-- Its own identifier, so it gets its own defaults domain and cannot
+         inherit Flip's stored creations folder — which is the drawings you
+         already have. -->
+    <key>CFBundleIdentifier</key>        <string>ai.flip.reflip</string>
+${ICON_KEYS}
+    <key>CFBundlePackageType</key>       <string>APPL</string>
+    <!-- The newest build number in VersionHistory.swift. That file counts it
+         off its own list; this one cannot read Swift, so it is repeated here
+         and the two have to be changed together. -->
+    <key>CFBundleShortVersionString</key><string>17</string>
+    <key>CFBundleVersion</key>           <string>17</string>
+    <key>LSMinimumSystemVersion</key>    <string>15.0</string>
+    <key>NSHighResolutionCapable</key>   <true/>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>   <string>Flip Document</string>
+            <key>CFBundleTypeRole</key>   <string>Editor</string>
+            <key>LSItemContentTypes</key> <array><string>ai.flip.document</string></array>
+        </dict>
+    </array>
+</dict>
+</plist>
+PLIST
+
+codesign --force --deep --sign - "$APP" 2>/dev/null || true
+echo "built $APP"
