@@ -46,6 +46,11 @@ struct MenuEntry: Identifiable {
     var children: [MenuEntry]?
     var action: (() -> Void)?
 
+    /// A picture of what the row *is*, under its name, for a choice whose whole
+    /// point is how it looks. A list of brushes named Light and Soft tells you
+    /// nothing you could act on; a stroke of each tells you everything.
+    var preview: CGImage?
+
     static func item(_ title: String, shortcut: String? = nil,
                      enabled: Bool = true, selected: Bool = false,
                      _ action: @escaping () -> Void) -> MenuEntry {
@@ -54,6 +59,12 @@ struct MenuEntry: Identifiable {
     }
 
     static var separator: MenuEntry { MenuEntry(isSeparator: true) }
+
+    /// A row that shows what it means as well as naming it.
+    static func choice(_ title: String, preview: CGImage?, selected: Bool = false,
+                       _ action: @escaping () -> Void) -> MenuEntry {
+        MenuEntry(title: title, selected: selected, action: action, preview: preview)
+    }
 
     static func submenu(_ title: String, enabled: Bool = true,
                         _ children: [MenuEntry]) -> MenuEntry {
@@ -331,33 +342,49 @@ private struct MenuPanel: View {
 
     private func row(_ entry: MenuEntry) -> some View {
         let lit = active == entry.id && entry.isChoosable
-        return HStack(spacing: 10) {
-            if ticked {
-                IconView(icon: .check, size: 11)
-                    .foregroundStyle(FlipTheme.accent)
-                    .frame(width: 12)
-                    // Held in the layout rather than left out of it, so the
-                    // titles do not shift when the choice moves.
-                    .opacity(entry.selected ? 1 : 0)
-            }
-            Text(entry.title)
-                .font(.system(size: 11))
-                .lineLimit(1)
-            Spacer(minLength: 12)
-            if let shortcut = entry.shortcut {
-                Text(shortcut)
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 10) {
+                if ticked {
+                    IconView(icon: .check, size: 11)
+                        .foregroundStyle(FlipTheme.accent)
+                        .frame(width: 12)
+                        // Held in the layout rather than left out of it, so the
+                        // titles do not shift when the choice moves.
+                        .opacity(entry.selected ? 1 : 0)
+                }
+                Text(entry.title)
                     .font(.system(size: 11))
-                    .foregroundStyle(entry.enabled ? FlipTheme.textTertiary
-                                                   : FlipTheme.textTertiary.opacity(0.5))
-            } else if entry.children != nil {
-                IconView(icon: .chevronRight, size: 11)
+                    .lineLimit(1)
+                Spacer(minLength: 12)
+                if let shortcut = entry.shortcut {
+                    Text(shortcut)
+                        .font(.system(size: 11))
+                        .foregroundStyle(entry.enabled ? FlipTheme.textTertiary
+                                                       : FlipTheme.textTertiary.opacity(0.5))
+                } else if entry.children != nil {
+                    IconView(icon: .chevronRight, size: 11)
+                }
+            }
+            .frame(height: 24)
+
+            if let preview = entry.preview {
+                // Indented to the title, not to the row: the tick's gutter is
+                // part of the name's column, and a stroke starting left of the
+                // word it belongs to reads as a rule between rows.
+                Image(decorative: preview, scale: 2, orientation: .up)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, ticked ? 22 : 0)
+                    .padding(.bottom, 4)
+                    .allowsHitTesting(false)
             }
         }
         // A disabled row is still a row — it says what is not available and why
         // the command is not there, which is why the menus offer them at all.
         .foregroundStyle(entry.enabled ? FlipTheme.textPrimary : FlipTheme.textTertiary)
         .padding(.horizontal, 10)
-        .frame(height: 24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 4)
             .fill(lit ? FlipTheme.rowHover : .clear)

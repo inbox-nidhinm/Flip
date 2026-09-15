@@ -20,6 +20,10 @@ struct Region {
 ///   subtract   clip to the first child, then to the *outside* of each other
 ///              (a huge rect plus that child, filled even-odd)
 enum Render {
+    /// One sheet of paper under the whole document. Fixed rather than per-layer
+    /// so strokes that cross land on the same tooth — a seed per layer would
+    /// give every mark its own private paper, which reads as collage.
+    static let paperSeed: UInt64 = 0x50415045_52000001
     /// Large enough to stand in for "everywhere" when inverting a clip.
     static let huge = CGRect(x: -1e5, y: -1e5, width: 2e5, height: 2e5)
 
@@ -141,7 +145,10 @@ enum Render {
                         stroke: stroke, width: layer.strokeWidth, alpha: alpha)
                 return
             }
-            paint(r, in: ctx, fill: fill, stroke: stroke, width: layer.strokeWidth, alpha: alpha)
+            // The paper is fixed to the sheet, not to the layer: the seed is the
+            // same for every stroke so two that cross meet the same tooth.
+            paint(r, in: ctx, fill: fill, stroke: stroke, width: layer.strokeWidth,
+                  alpha: alpha, nib: layer.nib ?? .pen, seed: paperSeed)
             return
         }
 
@@ -164,20 +171,33 @@ enum Render {
     }
 
     private static func paint(_ r: Region, in ctx: CGContext,
-                              fill: RGBA?, stroke: RGBA?, width: CGFloat, alpha: Double) {
+                              fill: RGBA?, stroke: RGBA?, width: CGFloat, alpha: Double,
+                              nib: Nib = .pen, seed: UInt64 = 0) {
         if let fill {
             ctx.addPath(r.path)
             ctx.setFillColor(fill.cg(alpha: alpha))
             ctx.fillPath(using: r.rule)
         }
-        if let stroke, width > 0 {
-            ctx.addPath(r.path)
-            ctx.setStrokeColor(stroke.cg(alpha: alpha))
-            ctx.setLineWidth(width)
-            ctx.setLineJoin(.round)
-            ctx.setLineCap(.round)
-            ctx.strokePath()
+        guard let stroke, width > 0 else { return }
+        // The nib takes the outline and nothing else — the fill above is the
+        // layer's own either way, which is what makes this an addition to the
+        // stroke rather than a replacement for it.
+        //
+        // A shape, so it is filled rather than stroked, and with the even-odd
+        // rule so the holes the paper punched through it stay holes.
+        if nib.isPencil,
+           let mark = Pencil.mark(r.path, nib: nib, width: width, seed: seed) {
+            ctx.addPath(mark)
+            ctx.setFillColor(stroke.cg(alpha: alpha))
+            ctx.fillPath(using: .evenOdd)
+            return
         }
+        ctx.addPath(r.path)
+        ctx.setStrokeColor(stroke.cg(alpha: alpha))
+        ctx.setLineWidth(width)
+        ctx.setLineJoin(.round)
+        ctx.setLineCap(.round)
+        ctx.strokePath()
     }
 
     /// Strokes the children at double width, then removes everything that falls

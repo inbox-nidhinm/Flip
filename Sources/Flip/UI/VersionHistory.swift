@@ -75,6 +75,13 @@ enum VersionHistory {
     }
 
     static let builds: [Build] = [
+        .init(title: "Pencil", versions: [
+            .init(date: "15 September", changes: [
+                "A pencil nib under Stroke, in four grades — the line keeps its own colour and width",
+                "The mark is a shape, so it exports to SVG and stays crisp at any zoom",
+                "One sheet of paper under the drawing: strokes that cross meet the same grain",
+            ]),
+        ]),
         .init(title: "Dynamic strokes", versions: [
             .init(date: "15 September", changes: [
                 "Lines can wander off the path they were drawn on, for a hand-drawn edge",

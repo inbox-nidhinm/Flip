@@ -273,6 +273,28 @@ struct ToolsPanel: View {
            onBegin: { model.beginSliderEdit() },
            onCommit: { model.endSliderEdit() })
 
+        // What lays the line down, above how it wanders: the nib is a choice
+        // about the mark itself, where the three below are adjustments to it.
+        //
+        // A menu rather than a row of segments. Five names across a 208pt panel
+        // already truncated "Medium" to "Medi…", and the next brush added would
+        // have had nowhere to go — but the real reason is that the names are not
+        // the choice. A stroke of each says what Soft means; the word does not.
+        MenuRow(label: "Nib", value: model.selectionNib.label,
+                preview: NibPreview.image(model.selectionNib,
+                                          tint: FlipTheme.textPrimary.rgba)) {
+            let current = model.selectionNib
+            return Nib.allCases.map { nib in
+                MenuEntry.choice(nib.label,
+                                 preview: NibPreview.image(nib, tint: FlipTheme.textPrimary.rgba),
+                                 selected: nib == current) {
+                    model.setNib(nib)
+                }
+            }
+        }
+        .onAppear { model.nib = model.selectionNib }
+        .onChange(of: model.selection) { _, _ in model.nib = model.selectionNib }
+
         // Under the width, because these are the same question about the same
         // mark: how thick the line is, then how steadily it is drawn. They were
         // a group of their own and that was wrong — it put the hand holding the
@@ -281,19 +303,19 @@ struct ToolsPanel: View {
         // In this order because it is the order the three questions come in:
         // how many bumps, how big, how jagged. Boil is last because it is the
         // only one that asks about the frames rather than about the line.
-        SliderRow(label: "Frequency", value: Binding(
+        SliderRow(label: "Frequency", icon: .frequency, value: Binding(
             get: { model.wiggle.frequency },
             set: { var w = model.wiggle; w.frequency = $0; model.setWiggle(w) }
         ), range: 0...1, style: .percent, onBegin: { model.beginSliderEdit() },
            onCommit: { model.endSliderEdit() })
 
-        SliderRow(label: "Wiggle", value: Binding(
+        SliderRow(label: "Wiggle", icon: .wiggle, value: Binding(
             get: { model.wiggle.amount },
             set: { var w = model.wiggle; w.amount = $0; model.setWiggle(w) }
         ), range: 0...1, style: .percent, onBegin: { model.beginSliderEdit() },
            onCommit: { model.endSliderEdit() })
 
-        SliderRow(label: "Smoothen", value: Binding(
+        SliderRow(label: "Smoothen", icon: .smoothen, value: Binding(
             get: { model.wiggle.smoothen },
             set: { var w = model.wiggle; w.smoothen = $0; model.setWiggle(w) }
         ), range: 0...1, style: .percent, onBegin: { model.beginSliderEdit() },
@@ -302,7 +324,7 @@ struct ToolsPanel: View {
         // At zero every frame wanders identically and a held drawing is
         // perfectly still — which is the setting for texture rather than life,
         // and the reason this is a dial and not a switch.
-        SliderRow(label: "Boil", value: Binding(
+        SliderRow(label: "Boil", icon: .boil, value: Binding(
             get: { model.wiggle.boil },
             set: { var w = model.wiggle; w.boil = $0; model.setWiggle(w) }
         ), range: 0...1, style: .percent, onBegin: { model.beginSliderEdit() },

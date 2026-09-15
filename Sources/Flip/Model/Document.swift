@@ -258,6 +258,12 @@ struct Layer: Identifiable, Codable, Equatable {
     /// a line that goes exactly where it was drawn.
     var wiggle: Wiggle?
 
+    /// What lays the stroke down. Absent is an even stroke, which is what every
+    /// layer drawn before this existed has — and optional for the usual reason:
+    /// a non-optional field added to a `Codable` struct makes every older
+    /// `.flip` file fail to decode.
+    var nib: Nib?
+
     /// `blend` with its absent case spelled out.
     var blending: Blend {
         get { blend ?? .normal }

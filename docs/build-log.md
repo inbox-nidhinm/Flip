@@ -403,3 +403,50 @@ other hundred-odd.
 The rule it settled on: a line ships if the app can now do something it could
 not before. A cursor, a hotkey, a rearrangement or a fix is not that, however
 much work it was.
+
+---
+
+## v0.0.4.1 — 15 September
+
+**Pencil** · *A nib that leaves grain*
+
+- A pencil nib under Stroke, in four grades. An addition to the stroke rather than a replacement: the colour, the width, the path and the fill are all still the layer's own, and the nib only changes how the outline is laid down.
+- The model is graphite against paper. `ink` is how much the stroke wants at a point — full along the centreline, falling away across the width. `tooth` is how high the sheet stands there. Where the ink beats the tooth there is graphite and where it does not there is bare paper, and that one comparison produces a dense core dissolving into separate specks at the fringe without a speck ever being placed by hand.
+- Built first as a raster mask, which was the wrong answer and was rebuilt at Nidhin's suggestion as geometry: the outline eaten into along both edges, with holes punched through where the paper stood proud. Vector settles three things at once — it survives the SVG export, it stays crisp at any zoom where a mask is only as good as the resolution it was built at, and it costs what a path costs.
+- The paper is held in *document* coordinates and shares one seed across the whole drawing. Two lines that cross have to meet the same sheet or they read as two pictures laid over each other, and the grain must not slide about when the artboard is panned.
+- `Grain.swift`'s bitmap was no use for it: photographic speckle authored as a tint for dark panels, at the size of a panel rather than of a pencil mark. The tooth is generated from the noise already written for the wander, which tiles exactly and makes the grain size a number rather than an asset.
+- Three false starts on the cost, each measured rather than guessed. Blamed the buffer copy and rewrote it to draw straight into the image's memory: no change. Blamed the per-pixel pass and skipped eight bytes at a time: no change, because the benchmark that said the walk was free had been optimised away. The vector rebuild then went *slower* — 269 ms for sixty strokes — and that one was the fill: CoreGraphics scan-converting thousands of tiny subpaths. Budgeting the holes, so the grid opens up instead of multiplying, brought it to 39 ms against 13 ms for a plain stroke.
+- The first vector attempt read as woven cloth: holes on a regular lattice as identical axis-aligned squares. Fixed by jittering each hole most of a cell in both directions from two unrelated noise fields, varying the size by a factor of three, and making the speck a four-sided shape with every corner pushed about. Sameness gives it away as much as regularity does.
+- The mark is cached, keyed on the centreline — forty-odd points — rather than on the mark, which is thousands. A boiling stroke changes every frame and misses every time; that is correct, and it is the only case that does.
+- Known cost: an SVG carries about 48 KB per pencil stroke, since every speck is a subpath. A long animation of them will make a large file.
+
+---
+
+## 15 September — no version
+
+*Picking a nib by looking at it*
+
+Real work, but nothing a user would call a feature — a control changed shape, so
+it is here and not in the app's own list.
+
+- The five nibs were a row of segments, and a 208pt panel had already truncated "Medium" to "Medi…". The next brush added would have had nowhere to go at all.
+- The deeper reason is that the names are not the choice. "Soft" and "Light" tell you nothing you could act on; a stroke of each tells you everything. The menu rows now carry a sample above the name.
+- The samples are drawn with the same `Pencil` the canvas uses, not with artwork of their own. A picker showing a *drawing* of a brush can be wrong about it; one showing the brush's own mark cannot, and it follows any change to the nib for free.
+- `MenuEntry` gained an optional preview and the menu row a second line, so this is available to any future list where the choice is a look rather than a word.
+- A wave, not a rule: a brush's character is in how it turns, and a straight line shows none of it.
+- The shut control shows the mark rather than the word. It answers the only question anyone asks of it — what am I about to draw with — without making you translate a name back into a picture you have already been shown. The name stays in the menu, which is where it earns its keep: it is how you tell someone else which one you meant.
+
+---
+
+## 15 September — no version
+
+*Marks instead of words on the dynamic rows*
+
+Real work, but nothing a user would call a feature — labels became icons, so it
+is here and not in the app's own list.
+
+- Frequency, Wiggle, Smoothen and Boil lost their labels and took icons, with the track beside each rather than under it. Four words stacked down a panel are four lines of reading before you reach the first control; four marks are a row of things you recognise.
+- The name comes back on a hover held past **two seconds**. Longer than the system's own, deliberately: these sit in a panel whose controls are dragged past constantly, and a tip at half a second would be a panel that flickers while you work. At two it only ever answers a question you are actually asking. Drawn rather than handed to `.help()`, which brings its own chrome and corner into a panel that draws both itself.
+- Fixed the icon generator instead of hand-splicing four more icons into it. `home` and the five `feature*` icons had been pasted straight into `Icons.swift` with no artwork on disk, so re-running the script dropped them and broke the build — the file had carried a warning about it since the bone icon went in the same way. Their path data was written back out as real `.svg` files, the script's list brought back in step, and the whole set regenerated: 57 icons to 61, nothing lost and nothing changed. The warning is gone with it.
+- Two wrong turns on the tip, both found by probing rather than reasoning. It did not appear with a two-second delay, nor with none, nor even rendered unconditionally — so the state was never the problem. Colouring the icon by its own hover state proved `onHover` was firing on the right icon all along. The overlay was drawing and then being painted over: the slider track is a *later sibling* in the row, and an overlay outranks its own content but not the views drawn after it. A `zIndex` on the icon settled it.
+- Several runs before that were lost to the window having been resized and the app sitting on the home screen — the coordinates were measured against a stale screenshot, which is worth remembering the next time a hover "does not work".

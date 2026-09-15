@@ -389,3 +389,24 @@ extension Subpath {
         return (best.0, best.1)
     }
 }
+
+extension CGPath {
+    /// The `d` attribute for a path built rather than stored — the pencil's
+    /// mark, which is geometry the document never holds.
+    var svgPathData: String {
+        var out: [String] = []
+        func f(_ v: CGFloat) -> String { String(format: "%.2f", v) }
+        applyWithBlock { e in
+            let p = e.pointee
+            switch p.type {
+            case .moveToPoint:         out.append("M \(f(p.points[0].x)) \(f(p.points[0].y))")
+            case .addLineToPoint:      out.append("L \(f(p.points[0].x)) \(f(p.points[0].y))")
+            case .addQuadCurveToPoint: out.append("Q \(f(p.points[0].x)) \(f(p.points[0].y)) \(f(p.points[1].x)) \(f(p.points[1].y))")
+            case .addCurveToPoint:     out.append("C \(f(p.points[0].x)) \(f(p.points[0].y)) \(f(p.points[1].x)) \(f(p.points[1].y)) \(f(p.points[2].x)) \(f(p.points[2].y))")
+            case .closeSubpath:        out.append("Z")
+            @unknown default:          break
+            }
+        }
+        return out.joined(separator: " ")
+    }
+}

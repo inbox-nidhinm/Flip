@@ -88,6 +88,20 @@ ICONS = [
     ("replaceRef",    "Tools Panel/replace-reference.svg"),
     ("removeRef",     "Tools Panel/remove-reference.svg"),
     ("chooseRef",     "Tools Panel/choose-reference-image.svg"),
+
+    ("# Dynamic stroke", None),
+    ("frequency",     "Tools Panel/frequency.svg"),
+    ("wiggle",        "Tools Panel/wiggle.svg"),
+    ("smoothen",      "Tools Panel/smoothen.svg"),
+    ("boil",          "Tools Panel/boil.svg"),
+
+    ("# Home and onboarding", None),
+    ("home",            "Onboarding/home.svg"),
+    ("featureConnect",  "Onboarding/featureConnect.svg"),
+    ("featureLayers",   "Onboarding/featureLayers.svg"),
+    ("featureAutosave", "Onboarding/featureAutosave.svg"),
+    ("featureShortcuts", "Onboarding/featureShortcuts.svg"),
+    ("featureSVG",      "Onboarding/featureSVG.svg"),
 ]
 
 D = re.compile(r'\sd="([^"]*)"')

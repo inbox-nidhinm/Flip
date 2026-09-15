@@ -152,6 +152,20 @@ struct SVGExport {
         switch layer.content {
         case .shape(let s):
             guard !s.isEmpty else { return "" }
+            // A pencil is a shape, not a stroke, and that is the whole reason it
+            // was built from geometry: the mark exports as a filled path like
+            // anything else here, rather than needing a picture of itself.
+            if let nib = layer.nib, nib.isPencil, let stroke, width > 0,
+               let mark = Pencil.mark(s.cgPath, nib: nib, width: width,
+                                      seed: Render.paperSeed) {
+                var out = ""
+                if let fill {
+                    out += indent + path(s.svgPathData, fill: fill, rule: "nonzero",
+                                         stroke: nil, width: 0) + "\n"
+                }
+                return out + indent + path(mark.svgPathData, fill: stroke, rule: "evenodd",
+                                           stroke: nil, width: 0)
+            }
             return indent + path(s.svgPathData, fill: fill, rule: "nonzero",
                                  stroke: stroke, width: width)
 

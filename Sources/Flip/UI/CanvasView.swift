@@ -416,15 +416,31 @@ final class Surface: NSView {
             // from the start, so what is already down does not move when more
             // is added to the end.
             let w = model.wiggle
+            let live: CGPath
             if !w.isIdle {
-                let live = Subpath(anchors: pts.map { Anchor($0) }, closed: false)
-                let rough = w.applied(to: Shape2D(subpaths: [live]),
-                                      still: Wobble.seed(strokeIdentity),
-                                      moving: Wobble.seed(strokeIdentity, model.frame.id))
-                ctx.addPath(rough.cgPath)
+                let raw = Subpath(anchors: pts.map { Anchor($0) }, closed: false)
+                live = w.applied(to: Shape2D(subpaths: [raw]),
+                                 still: Wobble.seed(strokeIdentity),
+                                 moving: Wobble.seed(strokeIdentity, model.frame.id)).cgPath
             } else {
-                ctx.addLines(between: pts)
+                let p = CGMutablePath()
+                p.addLines(between: pts)
+                live = p
             }
+            // The nib too, for the same reason the wander is here: a line that
+            // goes down as a pen and turns to graphite when you let go is a line
+            // you cannot judge while drawing it.
+            let colour = model.strokeEnabled ? model.strokeColor : accent
+            if model.nib.isPencil,
+               let mark = Pencil.mark(live, nib: model.nib,
+                                      width: max(model.strokeWidth, 1 / zoom),
+                                      seed: Render.paperSeed) {
+                ctx.addPath(mark)
+                ctx.setFillColor(colour.cg)
+                ctx.fillPath(using: .evenOdd)
+                return
+            }
+            ctx.addPath(live)
             ctx.strokePath()
 
         case .shape(let a, let b):

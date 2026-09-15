@@ -169,6 +169,13 @@ extension View {
 /// whole of what a slider has to say.
 struct SliderRow: View {
     let label: String
+    /// Shown in place of the label, with the track beside it rather than under.
+    ///
+    /// For a run of rows that belong together: four words stacked down a panel
+    /// are four lines of reading before you reach the first control, where four
+    /// marks are a row of things you recognise. The label is still the truth of
+    /// what it is and comes back on a slow hover — see `HelpTip`.
+    var icon: Icon?
     @Binding var value: Double
     let range: ClosedRange<Double>
     /// How the number reads. Always a whole number: a decimal place that is
@@ -192,17 +199,101 @@ struct SliderRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundStyle(FlipTheme.textSecondary)
-                .lineLimit(1)
+        Group {
+            if let icon {
+                HStack(spacing: 8) {
+                    IconView(icon: icon, size: 15)
+                        .foregroundStyle(FlipTheme.textSecondary)
+                        .frame(width: 20, height: FlipTheme.rowHeight)
+                        .contentShape(Rectangle())
+                        .helpTip(label)
+                        // Above the track, which is a later sibling in this row
+                        // and would otherwise paint straight over the tip: an
+                        // overlay outranks its own content, not the views drawn
+                        // after it.
+                        .zIndex(1)
+                    PillTrack(value: $value, range: range, readout: readout,
+                              onBegin: onBegin, onCommit: onCommit)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(label)
+                        .font(.system(size: 11))
+                        .foregroundStyle(FlipTheme.textSecondary)
+                        .lineLimit(1)
 
-            PillTrack(value: $value, range: range, readout: readout,
-                      onBegin: onBegin, onCommit: onCommit)
+                    PillTrack(value: $value, range: range, readout: readout,
+                              onBegin: onBegin, onCommit: onCommit)
+                }
+            }
         }
         .padding(.vertical, 2)
     }
+}
+
+// MARK: - Slow help
+
+/// The name of a thing, after you have looked at it long enough to be asking.
+///
+/// Two seconds, which is longer than the system's own and deliberately so: this
+/// appears over a panel of controls that are dragged past constantly, and a tip
+/// that came up at half a second would be a panel that flickers while you work.
+/// At two, it only ever answers a question you are actually asking.
+///
+/// Drawn rather than handed to `.help()`: the system tooltip brings its own
+/// chrome, its own corner and its own delay, into a panel that draws all three
+/// itself.
+private struct HelpTip: ViewModifier {
+    let text: String
+    @State private var hovering = false
+    @State private var showing = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { inside in
+                hovering = inside
+                if !inside { showing = false }
+            }
+            // `.task(id:)` rather than a `Task` started in the hover: it is
+            // bound to the view's own lifetime and to this value of `hovering`,
+            // so leaving cancels the wait instead of leaving it to fire into a
+            // pointer that has gone. A bare `Task` did neither, and nothing
+            // appeared at all.
+            .task(id: hovering) {
+                guard hovering else { return }
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                showing = true
+            }
+            .overlay(alignment: .leading) {
+                if showing {
+                    Text(text)
+                        .font(.system(size: 10))
+                        .foregroundStyle(FlipTheme.textPrimary)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(RoundedRectangle(cornerRadius: 5)
+                            .fill(FlipTheme.panel)
+                            .shadow(color: .black.opacity(0.4), radius: 8, y: 3))
+                        .overlay(RoundedRectangle(cornerRadius: 5)
+                            .strokeBorder(FlipTheme.border, lineWidth: 1))
+                        // Beside the mark rather than over it: a tip that covers
+                        // the thing you are pointing at answers the question by
+                        // hiding the subject of it.
+                        .offset(x: 26)
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
+                }
+            }
+            .animation(.easeOut(duration: 0.12), value: showing)
+    }
+}
+
+extension View {
+    /// The name of this control, after a long look.
+    func helpTip(_ text: String) -> some View { modifier(HelpTip(text: text)) }
 }
 
 /// The track itself, split out so the value readout above does not re-lay it out
@@ -515,6 +606,14 @@ struct MenuRow: View {
     let label: String
     /// What the control reads when shut — the choice in force, not the label.
     let value: String
+    /// A picture of the choice in force, shown *instead* of `value`.
+    ///
+    /// For a choice whose whole point is how it looks: the shut control then
+    /// answers the only question anyone asks of it — what am I about to draw
+    /// with — without making you translate a word back into a picture you have
+    /// already been shown. The name is still in the menu, where it is how you
+    /// tell someone else which one you meant.
+    var preview: CGImage?
     let entries: () -> [MenuEntry]
 
     @EnvironmentObject private var menus: MenuHost
@@ -532,11 +631,19 @@ struct MenuRow: View {
                 .lineLimit(1)
 
             HStack(spacing: 6) {
-                Text(value)
-                    .font(.system(size: 11))
-                    .foregroundStyle(FlipTheme.textPrimary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
+                if let preview {
+                    Image(decorative: preview, scale: 2, orientation: .up)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 20)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Text(value)
+                        .font(.system(size: 11))
+                        .foregroundStyle(FlipTheme.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
                 IconView(icon: .chevronDown, size: 11)
                     .foregroundStyle(FlipTheme.textTertiary)
             }

@@ -328,6 +328,8 @@ final class AppModel: ObservableObject {
     /// The wander the next line will be drawn with, and what the panel's
     /// dials sit at when nothing is selected.
     @Published var wiggle: Wiggle = .off
+    /// What the next stroke will be laid down with.
+    @Published var nib: Nib = .pen
 
     /// What the colour card is editing, and nil when it is shut.
     ///
@@ -939,6 +941,7 @@ final class AppModel: ObservableObject {
         // Stamped like the paint is: the dials describe the next line as much as
         // the selected one, so what is set when you draw is what you get.
         if !wiggle.isIdle { layer.wiggle = wiggle }
+        if nib.isPencil { layer.nib = nib }
         return layer
     }
 
@@ -1383,6 +1386,17 @@ final class AppModel: ObservableObject {
     /// and otherwise whatever was last set.
     var selectionWiggle: Wiggle {
         selectedLayersHere.first(where: { $0.wiggle != nil })?.wiggle ?? wiggle
+    }
+
+    /// Live, as the paint and the wander are: the drawing answers under the hand.
+    func setNib(_ n: Nib) {
+        nib = n
+        applyLive(to: selection) { $0.nib = n == .pen ? nil : n }
+    }
+
+    /// What the picker should read: the selection's, where there is one.
+    var selectionNib: Nib {
+        selectedLayersHere.first(where: { $0.nib != nil })?.nib ?? nib
     }
 
     /// The opacity to show. A single value when the selection agrees, and the
