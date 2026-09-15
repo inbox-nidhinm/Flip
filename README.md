@@ -117,6 +117,10 @@ Press `⌘/` in the app for the same list.
 into `Sources/Flip/Vendor/Colorful` rather than fetched, so the build works
 offline. Local changes are listed in `VENDOR.md` beside it.
 
+[Montagu Slab](https://github.com/floriankarsten/montagu-slab) by Florian
+Karsten, SIL Open Font License 1.1. Bundled at
+`Sources/Flip/Fonts`, with the licence beside it in `OFL.txt`.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

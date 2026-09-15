@@ -105,13 +105,15 @@ extension Color {
 /// different-looking title rather than a crash.
 enum FlipFont {
     /// The PostScript name, which is what `Font.custom` matches on — not the
-    /// family, which for this face is "PP Kyoto" with the weight held apart.
-    private static let face = "PPKyoto-Light"
+    /// family, which for this face is "Montagu Slab 48pt" with the weight held
+    /// apart. The file beside it is named to match, because the lookup below
+    /// asks for the resource under this same string.
+    private static let face = "MontaguSlab48pt-Regular"
 
     private static let registered: Bool = {
         guard let url = Bundle.module.url(forResource: face,
-                                          withExtension: "otf", subdirectory: "Fonts")
-                     ?? Bundle.module.url(forResource: face, withExtension: "otf")
+                                          withExtension: "ttf", subdirectory: "Fonts")
+                     ?? Bundle.module.url(forResource: face, withExtension: "ttf")
         else { return false }
         return CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
     }()
@@ -125,7 +127,8 @@ enum FlipFont {
     ///
     /// SwiftUI has no line-height control; `lineSpacing` is the gap *added*
     /// between lines, so the figure depends on how tall the face already sets
-    /// itself — which for Kyoto is not 1em and is not the system font's either.
+    /// itself — which for Montagu Slab is not 1em and is not the system font's
+    /// either.
     /// Asked of the font rather than guessed, so a change of face does not
     /// quietly change the leading with it.
     static func leading(_ size: CGFloat) -> CGFloat {
