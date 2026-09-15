@@ -123,4 +123,8 @@ Karsten, SIL Open Font License 1.1. Bundled at
 
 ## License
 
-Unlicense license.
+[The Unlicense](LICENSE). re-Flip's own code is released into the public domain.
+
+That covers this project's code only. The bundled dependencies above stay under
+their own terms: Colorful under MIT, and Montagu Slab under the SIL Open Font
+License, which requires the font keep that licence wherever it goes.
