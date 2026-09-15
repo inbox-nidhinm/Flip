@@ -123,4 +123,4 @@ Karsten, SIL Open Font License 1.1. Bundled at
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Unlicense license.
