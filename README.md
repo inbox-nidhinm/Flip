@@ -119,4 +119,4 @@ offline. Local changes are listed in `VENDOR.md` beside it.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Unlicense license.
