@@ -272,6 +272,46 @@ struct ToolsPanel: View {
         ), range: 0...24,
            onBegin: { model.beginSliderEdit() },
            onCommit: { model.endSliderEdit() })
+
+        // Under the width, because these are the same question about the same
+        // mark: how thick the line is, then how steadily it is drawn. They were
+        // a group of their own and that was wrong — it put the hand holding the
+        // pen in a different part of the panel from the pen.
+        //
+        // In this order because it is the order the three questions come in:
+        // how many bumps, how big, how jagged. Boil is last because it is the
+        // only one that asks about the frames rather than about the line.
+        SliderRow(label: "Frequency", value: Binding(
+            get: { model.wiggle.frequency },
+            set: { var w = model.wiggle; w.frequency = $0; model.setWiggle(w) }
+        ), range: 0...1, style: .percent, onBegin: { model.beginSliderEdit() },
+           onCommit: { model.endSliderEdit() })
+
+        SliderRow(label: "Wiggle", value: Binding(
+            get: { model.wiggle.amount },
+            set: { var w = model.wiggle; w.amount = $0; model.setWiggle(w) }
+        ), range: 0...1, style: .percent, onBegin: { model.beginSliderEdit() },
+           onCommit: { model.endSliderEdit() })
+
+        SliderRow(label: "Smoothen", value: Binding(
+            get: { model.wiggle.smoothen },
+            set: { var w = model.wiggle; w.smoothen = $0; model.setWiggle(w) }
+        ), range: 0...1, style: .percent, onBegin: { model.beginSliderEdit() },
+           onCommit: { model.endSliderEdit() })
+
+        // At zero every frame wanders identically and a held drawing is
+        // perfectly still — which is the setting for texture rather than life,
+        // and the reason this is a dial and not a switch.
+        SliderRow(label: "Boil", value: Binding(
+            get: { model.wiggle.boil },
+            set: { var w = model.wiggle; w.boil = $0; model.setWiggle(w) }
+        ), range: 0...1, style: .percent, onBegin: { model.beginSliderEdit() },
+           onCommit: { model.endSliderEdit() })
+        // Same reason opacity does it: the dials read what is selected, so
+        // picking a line shows the hand it was drawn with.
+        .onAppear { model.wiggle = model.selectionWiggle }
+        .onChange(of: model.selection) { _, _ in model.wiggle = model.selectionWiggle }
+        .onChange(of: model.frameIndex) { _, _ in model.wiggle = model.selectionWiggle }
     }
 
     // MARK: Layer

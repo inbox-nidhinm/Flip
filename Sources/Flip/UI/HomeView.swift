@@ -494,7 +494,7 @@ private struct SettingsPane: View {
 
                     // The same words the card's header uses, so the button and
                     // what it opens agree about what the number is called.
-                    Text("Build \(VersionHistory.version)")
+                    Text("v\(VersionHistory.version)")
                         .font(.system(size: 11))
                         .foregroundStyle(FlipTheme.textTertiary)
                 }

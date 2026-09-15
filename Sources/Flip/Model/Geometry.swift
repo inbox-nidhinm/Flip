@@ -99,9 +99,18 @@ struct Shape2D: Codable, Equatable {
             let segments = sp.closed ? n : n - 1
             for i in 0..<segments {
                 let from = a[i], to = a[(i + 1) % n]
-                path.addCurve(to: to.p,
-                              control1: from.p + from.outH,
-                              control2: to.p + to.inH)
+                // A segment with no handles *is* a straight line, and saying so
+                // is much cheaper than asking the rasteriser to flatten a cubic
+                // that was never curved. A wandered line at the rough end of the
+                // dial is hundreds of these in a row, and stating them as curves
+                // was most of what it cost to paint.
+                if from.outH == .zero, to.inH == .zero {
+                    path.addLine(to: to.p)
+                } else {
+                    path.addCurve(to: to.p,
+                                  control1: from.p + from.outH,
+                                  control2: to.p + to.inH)
+                }
             }
             if sp.closed { path.closeSubpath() }
         }

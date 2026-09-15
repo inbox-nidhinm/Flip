@@ -52,11 +52,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIdentifier</key>        <string>ai.flip.reflip</string>
 ${ICON_KEYS}
     <key>CFBundlePackageType</key>       <string>APPL</string>
-    <!-- The newest build number in VersionHistory.swift. That file counts it
+    <!-- The newest version in VersionHistory.swift. That file counts it
          off its own list; this one cannot read Swift, so it is repeated here
          and the two have to be changed together. -->
-    <key>CFBundleShortVersionString</key><string>17</string>
-    <key>CFBundleVersion</key>           <string>17</string>
+    <key>CFBundleShortVersionString</key><string>0.0.3.1</string>
+    <key>CFBundleVersion</key>           <string>0.0.3.1</string>
     <key>LSMinimumSystemVersion</key>    <string>15.0</string>
     <key>NSHighResolutionCapable</key>   <true/>
     <key>CFBundleDocumentTypes</key>

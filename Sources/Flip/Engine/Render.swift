@@ -58,7 +58,7 @@ enum Render {
     /// stored geometry is the rest pose, and this is the only place that turns it
     /// into what you see.
     static func draw(_ frame: Frame, in ctx: CGContext, tint: RGBA? = nil, alpha: Double = 1) {
-        for layer in frame.layers { draw(frame.posed(layer), in: ctx, tint: tint, alpha: alpha) }
+        for layer in frame.layers { draw(frame.painted(layer), in: ctx, tint: tint, alpha: alpha) }
     }
 
     /// `override` forces a flat opaque fill and drops the stroke. Boolean groups

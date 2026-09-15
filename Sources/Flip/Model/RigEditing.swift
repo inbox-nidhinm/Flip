@@ -35,6 +35,35 @@ extension Frame {
         return out
     }
 
+    /// The layer as it is actually painted: posed, then wandered.
+    ///
+    /// Separate from `posed` on purpose. Hit testing and the selection box read
+    /// `posed`, so a click lands on the line as drawn and the handles sit still
+    /// — a box that shivered with the texture inside it would be a box you
+    /// could not aim at, and the wander is a property of the *painting* rather
+    /// than of the shape.
+    func painted(_ layer: Layer) -> Layer { painted(posed(layer), wiggle: nil) }
+
+    private func painted(_ layer: Layer, wiggle inherited: Wiggle?) -> Layer {
+        var out = layer
+        let w = layer.wiggle ?? inherited
+        if let w, !w.isIdle, let shape = layer.shape {
+            // Two seeds: one the layer keeps for the life of the drawing, one it
+            // gets afresh on every frame. `boil` decides how much of each is
+            // heard. The track rather than the id, where there is one, so the
+            // same element on consecutive frames wanders from the same place
+            // rather than jumping when a frame is duplicated.
+            let identity = layer.track ?? layer.id
+            out.shape = w.applied(to: shape,
+                                  still: Wobble.seed(identity),
+                                  moving: Wobble.seed(identity, id))
+        }
+        if !layer.children.isEmpty {
+            out.children = layer.children.map { painted($0, wiggle: w) }
+        }
+        return out
+    }
+
     /// Which armature, if any, drives this layer or anything inside it.
     ///
     /// Usually the layer's own — a group is bound as one thing — but a group

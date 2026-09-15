@@ -325,6 +325,9 @@ final class AppModel: ObservableObject {
     /// the answer — the panel knows which row is under the pointer, and the
     /// canvas knows where that shape is, and neither can see the other.
     @Published var hoveredLayer: UUID?
+    /// The wander the next line will be drawn with, and what the panel's
+    /// dials sit at when nothing is selected.
+    @Published var wiggle: Wiggle = .off
 
     /// What the colour card is editing, and nil when it is shut.
     ///
@@ -928,11 +931,15 @@ final class AppModel: ObservableObject {
     /// `base` is the kind — "Rectangle", "Circle", "Line", "Shape" — and the
     /// number is appended here so no call site can create an unnumbered layer.
     func newLayer(_ shape: Shape2D, name base: String) -> Layer {
-        Layer(name: nextName(base),
-              content: .shape(shape),
-              fill: (fillEnabled && shape.hasFillableArea) ? fillColor : nil,
-              stroke: strokeEnabled ? strokeColor : nil,
-              strokeWidth: strokeWidth)
+        var layer = Layer(name: nextName(base),
+                          content: .shape(shape),
+                          fill: (fillEnabled && shape.hasFillableArea) ? fillColor : nil,
+                          stroke: strokeEnabled ? strokeColor : nil,
+                          strokeWidth: strokeWidth)
+        // Stamped like the paint is: the dials describe the next line as much as
+        // the selected one, so what is set when you draw is what you get.
+        if !wiggle.isIdle { layer.wiggle = wiggle }
+        return layer
     }
 
     func deleteSelection() {
@@ -1357,6 +1364,25 @@ final class AppModel: ObservableObject {
     func setOpacity(_ a: Double) {
         opacity = a
         applyLive(to: selection) { $0.alpha = a }
+    }
+
+    // MARK: Wiggle
+
+    /// How far the line wanders, how tightly, and how much of that wander is
+    /// made afresh on every frame.
+    ///
+    /// Live rather than committed per step, exactly as opacity is: the drag
+    /// pushes one undo at its start and the drawing answers the whole way.
+    func setWiggle(_ w: Wiggle) {
+        wiggle = w
+        applyLive(to: selection) { $0.wiggle = w.isIdle ? nil : w }
+    }
+
+    /// What the dials should read. The selection's, where there is one — the
+    /// wander belongs to a line that already exists as much as to the next one —
+    /// and otherwise whatever was last set.
+    var selectionWiggle: Wiggle {
+        selectedLayersHere.first(where: { $0.wiggle != nil })?.wiggle ?? wiggle
     }
 
     /// The opacity to show. A single value when the selection agrees, and the

@@ -248,6 +248,16 @@ struct Layer: Identifiable, Codable, Equatable {
     /// struct makes every older `.flip` file fail to decode.
     var rig: Int?
 
+    /// How much this layer's lines wander off the path they were drawn on.
+    ///
+    /// Carries down to what is inside a group, the way a rig does, so a whole
+    /// character can be given one hand rather than one stroke at a time.
+    ///
+    /// Optional for the usual reason — a non-optional field added to a `Codable`
+    /// struct makes every older `.flip` file fail to decode — and absent means
+    /// a line that goes exactly where it was drawn.
+    var wiggle: Wiggle?
+
     /// `blend` with its absent case spelled out.
     var blending: Blend {
         get { blend ?? .normal }

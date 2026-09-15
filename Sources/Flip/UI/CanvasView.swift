@@ -61,6 +61,13 @@ final class Surface: NSView {
         }
     }
 
+    /// The identity the stroke in hand will be committed under.
+    ///
+    /// Held here rather than left to `newLayer` so the preview and the finished
+    /// layer wander identically — they are the same line, and it should not
+    /// change shape at the moment of letting go.
+    private var strokeIdentity = UUID()
+
     /// Whether the pointer is over the canvas right now, kept by the tracking
     /// area below. Asking AppKit costs a window-coordinate conversion and can
     /// be wrong mid-drag; this is only ever read to decide whether setting a
@@ -401,7 +408,23 @@ final class Surface: NSView {
             ctx.setStrokeColor((model.strokeEnabled ? model.strokeColor : accent).cg)
             ctx.setLineWidth(max(model.strokeWidth, 1 / zoom))
             ctx.setLineJoin(.round); ctx.setLineCap(.round)
-            ctx.addLines(between: pts)
+            // Wandering as it is drawn, not once the hand comes up. The texture
+            // is half of what the line *is*, and a stroke that went down smooth
+            // and roughened a moment later is a stroke you cannot aim.
+            //
+            // Stable as the stroke grows: the wander is a function of distance
+            // from the start, so what is already down does not move when more
+            // is added to the end.
+            let w = model.wiggle
+            if !w.isIdle {
+                let live = Subpath(anchors: pts.map { Anchor($0) }, closed: false)
+                let rough = w.applied(to: Shape2D(subpaths: [live]),
+                                      still: Wobble.seed(strokeIdentity),
+                                      moving: Wobble.seed(strokeIdentity, model.frame.id))
+                ctx.addPath(rough.cgPath)
+            } else {
+                ctx.addLines(between: pts)
+            }
             ctx.strokePath()
 
         case .shape(let a, let b):
@@ -931,6 +954,10 @@ final class Surface: NSView {
             }
 
         case .brush:
+            // Rolled now rather than at the commit: the wander is a function of
+            // the layer's identity, and a preview drawn under a different one
+            // would jump to a new shape the moment the hand came up.
+            strokeIdentity = UUID()
             drag = .stroke([p])
 
         case .rect, .ellipse:
@@ -1159,7 +1186,9 @@ final class Surface: NSView {
         case .stroke(let pts):
             if let sp = Fit.stroke(pts, closeWithin: model.snapDistance, zoom: zoom) {
                 let shape = Shape2D(subpaths: [sp])
-                model.add(model.newLayer(shape, name: sp.closed ? "Shape" : "Line"))
+                var layer = model.newLayer(shape, name: sp.closed ? "Shape" : "Line")
+                layer.id = strokeIdentity
+                model.add(layer)
             }
 
         case .shape(let a, let b):
