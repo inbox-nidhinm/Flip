@@ -108,7 +108,7 @@ enum FlipFont {
     /// family, which for this face is "Montagu Slab 48pt" with the weight held
     /// apart. The file beside it is named to match, because the lookup below
     /// asks for the resource under this same string.
-    private static let face = "MontaguSlab48pt-Regular"
+    private static let face = "MontaguSlab48pt-Light"
 
     private static let registered: Bool = {
         guard let url = Bundle.module.url(forResource: face,
@@ -613,7 +613,11 @@ struct MenuRow: View {
     /// with — without making you translate a word back into a picture you have
     /// already been shown. The name is still in the menu, where it is how you
     /// tell someone else which one you meant.
-    var preview: CGImage?
+    ///
+    /// Asked for at a width rather than handed over ready-made: the control is
+    /// as wide as the panel it sits in, and a picture drawn narrow and scaled up
+    /// to fill it would be a smeared version of the thing it is describing.
+    var preview: ((CGFloat) -> CGImage?)?
     let entries: () -> [MenuEntry]
 
     @EnvironmentObject private var menus: MenuHost
@@ -630,13 +634,19 @@ struct MenuRow: View {
                 .foregroundStyle(FlipTheme.textSecondary)
                 .lineLimit(1)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 if let preview {
-                    Image(decorative: preview, scale: 2, orientation: .up)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(height: 20)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // A reader rather than a fixed size: it takes whatever the
+                    // row has left after the chevron, and the sample is drawn to
+                    // exactly that.
+                    GeometryReader { proxy in
+                        if let image = preview(proxy.size.width) {
+                            Image(decorative: image, scale: 2, orientation: .up)
+                                .resizable()
+                                .frame(width: proxy.size.width, height: NibPreview.height)
+                        }
+                    }
+                    .frame(height: NibPreview.height)
                 } else {
                     Text(value)
                         .font(.system(size: 11))
@@ -648,7 +658,10 @@ struct MenuRow: View {
                     .foregroundStyle(FlipTheme.textTertiary)
             }
             .padding(.horizontal, 8)
-            .frame(height: FlipTheme.rowHeight + 4)
+            // A taller box when it holds a picture: a stroke needs room above
+            // and below it to read as a sample rather than as a lid.
+            .frame(height: preview == nil ? FlipTheme.rowHeight + 4
+                                          : FlipTheme.rowHeight + 18)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 5)
                 .fill(hovering ? FlipTheme.panelHover : FlipTheme.panelRaised))

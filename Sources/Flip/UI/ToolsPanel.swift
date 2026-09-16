@@ -281,8 +281,10 @@ struct ToolsPanel: View {
         // have had nowhere to go — but the real reason is that the names are not
         // the choice. A stroke of each says what Soft means; the word does not.
         MenuRow(label: "Nib", value: model.selectionNib.label,
-                preview: NibPreview.image(model.selectionNib,
-                                          tint: FlipTheme.textPrimary.rgba)) {
+                preview: { width in
+                    NibPreview.image(model.selectionNib,
+                                     tint: FlipTheme.textPrimary.rgba, width: width)
+                }) {
             let current = model.selectionNib
             return Nib.allCases.map { nib in
                 MenuEntry.choice(nib.label,

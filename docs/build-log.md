@@ -450,3 +450,35 @@ is here and not in the app's own list.
 - Fixed the icon generator instead of hand-splicing four more icons into it. `home` and the five `feature*` icons had been pasted straight into `Icons.swift` with no artwork on disk, so re-running the script dropped them and broke the build — the file had carried a warning about it since the bone icon went in the same way. Their path data was written back out as real `.svg` files, the script's list brought back in step, and the whole set regenerated: 57 icons to 61, nothing lost and nothing changed. The warning is gone with it.
 - Two wrong turns on the tip, both found by probing rather than reasoning. It did not appear with a two-second delay, nor with none, nor even rendered unconditionally — so the state was never the problem. Colouring the icon by its own hover state proved `onHover` was firing on the right icon all along. The overlay was drawing and then being painted over: the slider track is a *later sibling* in the row, and an overlay outranks its own content but not the views drawn after it. A `zIndex` on the icon settled it.
 - Several runs before that were lost to the window having been resized and the app sitting on the home screen — the coordinates were measured against a stale screenshot, which is worth remembering the next time a hover "does not work".
+
+---
+
+## 15 September — no version
+
+*The nib control, and a lighter title face*
+
+Real work, but a control's proportions and a change of weight — so it is here
+and not in the app's own list.
+
+- The nib sample now runs the full width of the control, stopping at the chevron with its own padding, and the box is taller to give the stroke room above and below it.
+- It is *drawn* to that width rather than scaled into it. The sample is a stroke, and a stroke stretched to fill smears its grain — which would make the picker lie about the very thing it exists to show. `MenuRow` now asks for the preview at a width instead of being handed one ready-made, and `NibPreview` caches per width, of which there are only ever one or two.
+- Montagu Slab moved from Regular to Light. One constant: the loader matches on the PostScript name and looks the file up under the same string, so the file is named `MontaguSlab48pt-Light.ttf` to match `MontaguSlab48pt-Light`. The leading is asked of the face rather than hard-coded, so it followed the change on its own — which is what that code was written for.
+- The Regular weight is gone from this build. Not in the original either, which uses a different face entirely — it is on the Desktop beside the Light, and is an open licence besides.
+
+---
+
+## 15 September — no version
+
+*Holding a line straight*
+
+A modifier, by the same rule that kept the duplicate cursor out of the app's own
+list — so it is here and not there.
+
+- ⇧ with the pen puts the next point on one of eight rays out of the last one, at 45° apart — which is how a horizontal, a vertical or a true diagonal gets drawn without aiming. The rubber band shows the point ⇧ would place, not the one the pointer is over, so the line drawn ahead of the press cannot promise something the press will not do.
+- ⇧ with the pointer pins a move to one axis, across or up, the way Figma does it. The axis is decided from the *start* of the drag rather than the last position, and re-decided on every move — swing past the diagonal and it changes, where an axis latched once could only be undone by letting go.
+- The point the drag remembers is the constrained one, not the pointer's own. That is what lets ⇧ go mid-drag and hand the selection straight back to the pointer in one step: it has been lagging by exactly the component that was being suppressed, so the difference is already the right correction.
+- The same ⇧ reaches the pen's handles and its points: a curve can leave a point square to the page, and an anchor can be dragged out along the direction the line was drawn in. ⇧ on the shape tools still means a square or a circle, which it always did.
+- Snapped **sideways** onto the ray rather than kept at its full distance from the origin. A hand 20° off the diagonal has drawn a line of some length; projecting keeps the point beside the hand, where holding the radius would run it out ahead of the pointer and make the lock feel like it was pulling.
+- `mouseDragged` was split so that `flagsChanged` can run it too. A modifier pressed in the middle of a drag has to take hold where the hand already is — ⇧ that only straightened the line after a further nudge of the mouse is the same complaint as a bone handle that appears only once you let go. `flagsChanged` carries no position of its own, so the pointer is re-read rather than remembered.
+- ⇧ on something already selected now waits for the release to decide what it meant. It is two intentions that are identical at the moment of the press: a click, which drops that layer from the selection, or the start of a drag held straight. Dropping it at once left ⇧-drag dragging everything *except* the thing under the pointer — so the drop happens on release, and only if the hand never moved. Figma draws the same distinction.
+- Checked by measurement, not by eye. A pen path drawn with ⇧ came back out of the saved file at 0.000°, −90.000°, 45.000° and 90.000°; a ⇧-locked move of a 45-anchor blob came back at dx 200.456, dy 0.000. The mid-drag case was the one worth watching rather than measuring: the shape snapped back onto its row the instant ⇧ went down, with the mouse stationary.

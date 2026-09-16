@@ -215,7 +215,10 @@ final class Surface: NSView {
         case none
         case stroke([CGPoint])
         case shape(CGPoint, CGPoint)
-        case move(last: CGPoint)
+        /// `origin` is only read by ⇧: an axis lock has to be measured from
+        /// where the hand started, not from the last position, or every small
+        /// step would be its own decision and the lock would wander.
+        case move(origin: CGPoint, last: CGPoint)
         case node(NodeRef, CGPoint)
         case handle(NodeRef, out: Bool)
         /// Pulling the handles out of the point just placed with the pen. A click
@@ -234,6 +237,16 @@ final class Surface: NSView {
         case newBone(start: CGPoint, rig: Int?, parent: Int?, current: CGPoint)
         /// Moving a handle of an armature already built.
         case poseBone(rig: Int, bone: Int, root: Bool)
+
+        /// Drags whose result depends on the modifiers held, and which therefore
+        /// have to be recomputed the moment one goes down or comes up rather than
+        /// waiting for the next twitch of the mouse.
+        var constrainable: Bool {
+            switch self {
+            case .move, .node, .handle, .penHandle, .shape, .scale, .rotate: return true
+            default: return false
+            }
+        }
 
         /// Drags that write to the document, and so want the interface to hold
         /// still until they finish.
@@ -271,6 +284,9 @@ final class Surface: NSView {
     private var drag: Drag = .none
     private var snapTarget: (NodeRef, CGPoint)?
     private var hoverPoint: CGPoint?
+    /// A ⇧-press on something already selected, waiting to find out whether it
+    /// was a click or the start of a drag. See `mouseDown`'s select branch.
+    private var pendingDeselect: UUID?
     /// The layer a click with the bone tool would bind or release. Canvas-side,
     /// unlike `model.hoveredLayer`, which the layers panel owns and which marks a
     /// row rather than an action.
@@ -619,7 +635,7 @@ final class Surface: NSView {
     /// changes anything — hence the either/or rather than both.
     private func beginMove(from p: CGPoint, leavingACopy copy: Bool) {
         if !copy || !model.duplicateSelectionInPlace() { model.commit() }
-        drag = .move(last: p)
+        drag = .move(origin: p, last: p)
     }
 
     /// The posed outlines of everything an armature on screen drives.
@@ -905,6 +921,7 @@ final class Surface: NSView {
         model.stop()
         let p = point(event)
         let shift = event.modifierFlags.contains(.shift)
+        pendingDeselect = nil
 
         // Moving the reference takes precedence over every tool, but only while it
         // is unlocked — the lock is what stops a stray drag shifting the thing you
@@ -1017,7 +1034,14 @@ final class Surface: NSView {
 
             if let hit = topLayer(at: p) {
                 if shift {
-                    if model.selection.contains(hit.id) { model.selection.remove(hit.id) }
+                    // ⇧ on something already picked is two different intentions
+                    // that look identical at the moment of the press: a click,
+                    // which drops it from the selection, or the start of a drag
+                    // held straight. So the drop waits for the release, and
+                    // happens only if the hand never moved — dropping it now
+                    // would leave ⇧-drag dragging everything *except* the thing
+                    // under the pointer.
+                    if model.selection.contains(hit.id) { pendingDeselect = hit.id }
                     else { model.selection.insert(hit.id) }
                 } else if !model.selection.contains(hit.id) {
                     model.selection = [hit.id]
@@ -1092,12 +1116,50 @@ final class Surface: NSView {
 
             // Nothing under the pointer, so this is a new point — either the
             // first of a path or the next one along.
-            placePenPoint(at: p)
+            placePenPoint(at: p, straight: shift)
         }
     }
 
+    /// ⇧ with the pen: the nearest ray out of `origin` at a multiple of 45°.
+    ///
+    /// The pointer is dropped sideways onto that ray rather than kept at its full
+    /// distance from `origin`, so the point lands beside the hand instead of
+    /// running out ahead of it — a hand 20° off the diagonal should not be given
+    /// a longer line than the one it drew.
+    private func angleLocked(_ p: CGPoint, from origin: CGPoint) -> CGPoint {
+        let d = p - origin
+        guard d.x != 0 || d.y != 0 else { return p }
+        let step = CGFloat.pi / 4
+        let a = (atan2(d.y, d.x) / step).rounded() * step
+        let u = CGPoint(x: cos(a), y: sin(a))
+        let along = d.x * u.x + d.y * u.y
+        return CGPoint(x: origin.x + u.x * along, y: origin.y + u.y * along)
+    }
+
+    /// ⇧ with the pointer: straight across or straight up, whichever the hand has
+    /// travelled further along.
+    ///
+    /// Decided afresh on every move rather than settled when ⇧ went down, so
+    /// swinging past the diagonal changes axis. A lock taken once could only be
+    /// undone by letting go of the whole drag.
+    private func axisLocked(_ p: CGPoint, from origin: CGPoint) -> CGPoint {
+        abs(p.x - origin.x) >= abs(p.y - origin.y)
+            ? CGPoint(x: p.x, y: origin.y)
+            : CGPoint(x: origin.x, y: p.y)
+    }
+
     override func mouseDragged(with event: NSEvent) {
-        let p = point(event)
+        continueDrag(at: convert(event.locationInWindow, from: nil), event.modifierFlags)
+    }
+
+    /// The drag carried on to a point, from wherever that point came from.
+    ///
+    /// Split out of `mouseDragged` because a modifier going down is also a reason
+    /// to recompute a drag — `flagsChanged` has no position of its own, so it
+    /// passes in the one the pointer is already at.
+    private func continueDrag(at viewPoint: CGPoint, _ flags: NSEvent.ModifierFlags) {
+        let p = toDoc(viewPoint)
+        let straight = flags.contains(.shift)
         switch drag {
         case .stroke(var pts):
             pts.append(p)
@@ -1105,18 +1167,23 @@ final class Surface: NSView {
 
         case .shape(let a, _):
             var b = p
-            if event.modifierFlags.contains(.shift) {
+            if straight {
                 let side = max(abs(b.x - a.x), abs(b.y - a.y))
                 b = CGPoint(x: a.x + side * (b.x < a.x ? -1 : 1), y: a.y + side * (b.y < a.y ? -1 : 1))
             }
             drag = .shape(a, b)
 
-        case .move(let last):
+        case .move(let origin, let last):
+            // ⇧ pins the selection to one axis. The point the drag remembers is the
+            // locked one rather than the pointer's own, so that letting ⇧ go hands
+            // the selection back to the pointer in a single step — it has been
+            // lagging by exactly the component that was being suppressed.
+            let to = straight ? axisLocked(p, from: origin) : p
             // Every frame the selection reaches, not just this one — ⌥-clicking a
             // layer in the panel selects it in all of them, and a move that only
             // took effect here would undo that link on the first drag.
-            model.translateSelection(by: p - last)
-            drag = .move(last: p)
+            model.translateSelection(by: to - last)
+            drag = .move(origin: origin, last: to)
 
         case .newBone(let start, let rig, let parent, _):
             drag = .newBone(start: start, rig: rig, parent: parent, current: p)
@@ -1126,50 +1193,54 @@ final class Surface: NSView {
                 model.poseRoot(rig: rig, bone: bone, to: p)
             } else {
                 model.poseTip(rig: rig, bone: bone, to: p,
-                              stretch: event.modifierFlags.contains(.option))
+                              stretch: flags.contains(.option))
             }
 
         case .penHandle(let ref):
             // Symmetric by default, which is what makes a dragged point smooth.
             // ⌥ moves only the outgoing handle, leaving a corner behind you and a
             // curve ahead — the standard way to turn a corner mid-path.
-            let breakPair = event.modifierFlags.contains(.option)
+            let breakPair = flags.contains(.option)
             model.editShape(ref.layer) { shape in
                 guard shape.subpaths.indices.contains(ref.subpath),
                       shape.subpaths[ref.subpath].anchors.indices.contains(ref.anchor) else { return }
                 var a = shape.subpaths[ref.subpath].anchors[ref.anchor]
-                a.outH = p - a.p
+                // ⇧ stands the handle on a 45° ray out of its own point, which is
+                // what makes a curve leave a point square to the page.
+                a.outH = (straight ? self.angleLocked(p, from: a.p) : p) - a.p
                 if !breakPair { a.inH = -a.outH }
                 shape.subpaths[ref.subpath].anchors[ref.anchor] = a
             }
 
-        case .node(let ref, _):
+        case .node(let ref, let from):
+            // 45° rather than the pointer's two axes: this is the pen's own drag,
+            // and a point dragged out of a line wants the same eight directions
+            // the line was drawn along.
+            let to = straight ? angleLocked(p, from: from) : p
             model.editShape(ref.layer) { s in
                 guard s.subpaths.indices.contains(ref.subpath),
                       s.subpaths[ref.subpath].anchors.indices.contains(ref.anchor) else { return }
-                s.subpaths[ref.subpath].anchors[ref.anchor].p = p
+                s.subpaths[ref.subpath].anchors[ref.anchor].p = to
             }
-            findSnap(from: ref, at: p)
+            findSnap(from: ref, at: to)
 
         case .handle(let ref, let out):
-            let mirror = !event.modifierFlags.contains(.option)
+            let mirror = !flags.contains(.option)
             model.editShape(ref.layer) { s in
                 guard s.subpaths.indices.contains(ref.subpath),
                       s.subpaths[ref.subpath].anchors.indices.contains(ref.anchor) else { return }
                 var a = s.subpaths[ref.subpath].anchors[ref.anchor]
-                let offset = p - a.p
+                let offset = (straight ? self.angleLocked(p, from: a.p) : p) - a.p
                 if out { a.outH = offset; if mirror { a.inH = -offset } }
                 else    { a.inH = offset;  if mirror { a.outH = -offset } }
                 s.subpaths[ref.subpath].anchors[ref.anchor] = a
             }
 
         case .scale(let s):
-            let locked = event.modifierFlags.contains(.shift)
-            model.transformSelection(s.originals, by: s.transform.transform(at: p, locked: locked))
+            model.transformSelection(s.originals, by: s.transform.transform(at: p, locked: straight))
 
         case .rotate(let r):
-            let locked = event.modifierFlags.contains(.shift)
-            let turn = r.transform.angle(at: p, locked: locked)
+            let turn = r.transform.angle(at: p, locked: straight)
             model.transformSelection(r.originals,
                                      by: .about(r.transform.pivot, .rotation(turn)),
                                      turningBy: turn)
@@ -1182,9 +1253,9 @@ final class Surface: NSView {
             drag = .reference(last: p)
 
         case .pan(let last):
-            let now = convert(event.locationInWindow, from: nil)
-            model.pan = CGPoint(x: model.pan.x + (now.x - last.x), y: model.pan.y + (now.y - last.y))
-            drag = .pan(now)
+            model.pan = CGPoint(x: model.pan.x + (viewPoint.x - last.x),
+                                y: model.pan.y + (viewPoint.y - last.y))
+            drag = .pan(viewPoint)
 
         case .none:
             break
@@ -1230,6 +1301,11 @@ final class Surface: NSView {
         case .poseBone:
             break
 
+        case .move(let origin, let last):
+            // The press turned out to be a click after all, so the ⇧ it was made
+            // with means what it always means and the layer leaves the selection.
+            if let id = pendingDeselect, last == origin { model.selection.remove(id) }
+
         case .node(let ref, _):
             if let (target, _) = snapTarget { model.join(ref, target) }
 
@@ -1247,6 +1323,7 @@ final class Surface: NSView {
         }
         drag = .none
         snapTarget = nil
+        pendingDeselect = nil
         // Recomputed on release, not just on the next move: binding a layer flips
         // what the highlight means, and the first bone of a new armature is what
         // makes there be anything to bind to at all.
@@ -1292,6 +1369,17 @@ final class Surface: NSView {
         // modifier alone has to be enough to change it, without waiting for the
         // hand to move.
         if model?.tool == .bezier || model?.tool == .select { refreshPointer() }
+        // A modifier pressed in the middle of a drag has to take hold where the
+        // hand already is. ⇧ that only straightened the line after a further
+        // nudge of the mouse would read as the lock having failed — the same
+        // complaint as a handle that appears only once you let go.
+        if drag.constrainable, model != nil, let window {
+            continueDrag(at: convert(window.mouseLocationOutsideOfEventStream, from: nil),
+                         event.modifierFlags)
+        }
+        // And the pen's rubber band is drawn to the point ⇧ would place, so it
+        // has to be redrawn on the modifier alone as well.
+        if pen != nil { needsDisplay = true }
         super.flagsChanged(with: event)
     }
 
@@ -1362,13 +1450,17 @@ final class Surface: NSView {
     ///
     /// Every point is committed as it lands, so ⌘Z steps back through them one at
     /// a time and abandoning the run leaves a real layer rather than losing work.
-    private func placePenPoint(at p: CGPoint) {
+    private func placePenPoint(at p: CGPoint, straight: Bool = false) {
         if let session = pen {
             model.commit()
+            // ⇧ puts the point on a 45° ray out of the last one. Only here, where
+            // there is a last one to measure from: the first point of a path has
+            // no angle to lock to and goes down where it was asked for.
+            let at = straight ? penTip(toward: p) : p
             var placed = 0
             model.editShape(session.layer) { shape in
                 guard shape.subpaths.indices.contains(session.subpath) else { return }
-                shape.subpaths[session.subpath].anchors.append(Anchor(p))
+                shape.subpaths[session.subpath].anchors.append(Anchor(at))
                 placed = shape.subpaths[session.subpath].anchors.count - 1
             }
             drag = .penHandle(NodeRef(layer: session.layer, subpath: session.subpath, anchor: placed))
@@ -1501,19 +1593,30 @@ final class Surface: NSView {
         needsDisplay = true
     }
 
+    /// Where the next point would land, with ⇧ held — asked by the click and by
+    /// the rubber band both, so the line drawn ahead of the press cannot promise
+    /// a point the press will not put down.
+    private func penTip(toward p: CGPoint) -> CGPoint {
+        guard let last = penSubpath()?.anchors.last else { return p }
+        return angleLocked(p, from: last.p)
+    }
+
     /// The segment that has not been committed yet: from the last point placed to
     /// wherever the pointer is, curving out of that point's handle so what you see
     /// is the segment you are about to get.
     private func drawPenPreview(_ ctx: CGContext) {
         guard pen != nil, let hover = hoverPoint,
               let sp = penSubpath(), let last = sp.anchors.last else { return }
+        // Read live rather than from the event that set `hoverPoint`: ⇧ can go
+        // down and come up without the mouse moving at all.
+        let tip = NSEvent.modifierFlags.contains(.shift) ? penTip(toward: hover) : hover
 
         ctx.setStrokeColor(FlipTheme.accent.rgba.cg(alpha: 0.9))
         ctx.setLineWidth(1)
         ctx.move(to: toView(last.p))
-        ctx.addCurve(to: toView(hover),
+        ctx.addCurve(to: toView(tip),
                      control1: toView(last.p + last.outH),
-                     control2: toView(hover))
+                     control2: toView(tip))
         ctx.strokePath()
 
         // Over the first point with enough points to enclose something: this
