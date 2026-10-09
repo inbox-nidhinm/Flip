@@ -495,3 +495,4 @@ A name and an icon, not a feature, so it is here and not in the app's own list.
 - The icon went back to the original green one. The dark version only ever meant "this is the development build", and there is no longer a second build to tell it apart from.
 - The app took the original's identifier, `ai.flip.app`, so it inherits Flip's settings rather than starting fresh as a stranger.
 - One creations folder instead of two. The default is `~/Documents/Flip Creations` again, and the three drawings from `re-Flip Creations` were moved in beside the originals. The comment that kept the two apart, written so that a new engine could not reach old drawings, was rewritten: with one app left, there is nothing to keep apart.
+- Flip's code moved from the Unlicense to the MIT License, as Twine and Pine did the same day. The README's License section says so; Colorful and Montagu Slab keep their own terms.

@@ -123,7 +123,7 @@ Karsten, SIL Open Font License 1.1. Bundled at
 
 ## License
 
-[The Unlicense](LICENSE). Flip's own code is released into the public domain.
+[MIT](LICENSE).
 
 That covers this project's code only. The bundled dependencies above stay under
 their own terms: Colorful under MIT, and Montagu Slab under the SIL Open Font
