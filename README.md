@@ -1,6 +1,6 @@
-<img src="Icon/icon.png" width="128" alt="re-Flip">
+<img src="Icon/icon.png" width="128" alt="Flip">
 
-# re-Flip
+# Flip
 
 Frame-by-frame vector animation for macOS. Draw, connect the lines into shapes,
 and export one animated SVG.
@@ -11,7 +11,7 @@ macOS 15 (Sequoia) or later. Apple silicon and Intel.
 
 ## Install
 
-re-Flip is not signed with an Apple Developer certificate, so macOS will refuse
+Flip is not signed with an Apple Developer certificate, so macOS will refuse
 to open it on the first try and say it is damaged. It is not. The warning means
 the app has no paid signature, and the fix is one command.
 
@@ -21,11 +21,11 @@ Build the app:
 ./make-app.sh release
 ```
 
-Move `build/re-Flip.app` to your Applications folder, then clear the quarantine
+Move `build/Flip.app` to your Applications folder, then clear the quarantine
 flag macOS attached to it:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/re-Flip.app
+xattr -dr com.apple.quarantine /Applications/Flip.app
 ```
 
 Open it normally after that. You only do this once per install.
@@ -123,7 +123,7 @@ Karsten, SIL Open Font License 1.1. Bundled at
 
 ## License
 
-[The Unlicense](LICENSE). re-Flip's own code is released into the public domain.
+[The Unlicense](LICENSE). Flip's own code is released into the public domain.
 
 That covers this project's code only. The bundled dependencies above stay under
 their own terms: Colorful under MIT, and Montagu Slab under the SIL Open Font

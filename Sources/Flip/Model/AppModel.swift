@@ -2085,14 +2085,12 @@ extension AppModel {
 
     // MARK: Autosave
 
-    /// `~/Documents/re-Flip Creations`, where a document with no home of its own
+    /// `~/Documents/Flip Creations`, where a document with no home of its own
     /// goes. Made on demand rather than at launch, so an app that is opened and
     /// closed without drawing anything leaves nothing behind.
     ///
-    /// **Deliberately not Flip's folder.** This build shares Flip's document
-    /// format and its Library can trash and move files, so pointing a build with
-    /// a new engine in it at the drawings you already have is one bug away from
-    /// losing them. Set the folder by hand if you do want to work on them.
+    /// This build was re-Flip until it replaced the original Flip, and kept its
+    /// own folder while the two ran side by side. They now share one.
     /// `nonisolated`: it computes a path and touches nothing on the model, and
     /// the library needs it from a plain struct.
     nonisolated static var creationsFolder: URL {
@@ -2105,7 +2103,7 @@ extension AppModel {
     nonisolated static var defaultCreationsFolder: URL {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Documents")
-        return documents.appendingPathComponent("re-Flip Creations", isDirectory: true)
+        return documents.appendingPathComponent("Flip Creations", isDirectory: true)
     }
 
     nonisolated static let creationsFolderKey = "creationsFolder"
@@ -2197,7 +2195,7 @@ extension AppModel {
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         } catch {
-            note("Could not make the re-Flip Creations folder")
+            note("Could not make the Flip Creations folder")
             return nil
         }
         let base = chosenName ?? defaultName

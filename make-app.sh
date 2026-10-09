@@ -24,10 +24,10 @@ if [ -n "$ART" ]; then
     <key>CFBundleIconName</key>          <string>AppIcon</string>'
 fi
 
-APP="build/re-Flip.app"
+APP="build/Flip.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/re-Flip"
+cp "$BIN" "$APP/Contents/MacOS/Flip"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 # The panel grain, as SwiftPM's generated resource bundle. It has to land in
@@ -43,13 +43,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key>              <string>re-Flip</string>
-    <key>CFBundleDisplayName</key>       <string>re-Flip</string>
-    <key>CFBundleExecutable</key>        <string>re-Flip</string>
-    <!-- Its own identifier, so it gets its own defaults domain and cannot
-         inherit Flip's stored creations folder — which is the drawings you
-         already have. -->
-    <key>CFBundleIdentifier</key>        <string>ai.flip.reflip</string>
+    <key>CFBundleName</key>              <string>Flip</string>
+    <key>CFBundleDisplayName</key>       <string>Flip</string>
+    <key>CFBundleExecutable</key>        <string>Flip</string>
+    <!-- The original Flip's identifier, taken over when this build replaced
+         it, so its settings and saved folder carry across. -->
+    <key>CFBundleIdentifier</key>        <string>ai.flip.app</string>
 ${ICON_KEYS}
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <!-- The newest version in VersionHistory.swift. That file counts it

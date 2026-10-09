@@ -112,7 +112,7 @@ struct HomeView: View {
             // Bottom-aligned in a block of known height, which is what puts it
             // on the shelf title's line — the two are different sizes, so
             // matching their top padding would not have.
-            Text("re-Flip")
+            Text("Flip")
                 .flipTitle(24)
                 .foregroundStyle(FlipTheme.textPrimary)
                 .padding(.horizontal, pad)
@@ -290,7 +290,7 @@ struct HomeView: View {
                     Text("Nothing here yet")
                         .font(.system(size: 12))
                         .foregroundStyle(FlipTheme.textSecondary)
-                    Text("New animations are saved to re-Flip Creations automatically.")
+                    Text("New animations are saved to Flip Creations automatically.")
                         .font(.system(size: 11))
                         .foregroundStyle(FlipTheme.textTertiary)
                 }

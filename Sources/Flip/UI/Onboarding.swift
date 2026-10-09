@@ -315,7 +315,7 @@ struct Onboarding: View {
     }
 
     private static let pages: [(text: String, button: String)] = [
-        ("re-Flip, a frame by frame vector animation tool with bones in it.", "Flip over"),
+        ("Flip, a frame by frame vector animation tool with bones in it.", "Flip over"),
         ("Select a folder to autosave your files.", "Flip again"),
         // The last page's sentence comes from whichever feature is showing.
         ("", "Start flipping"),

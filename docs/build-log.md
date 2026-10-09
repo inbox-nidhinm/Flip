@@ -482,3 +482,16 @@ list — so it is here and not there.
 - `mouseDragged` was split so that `flagsChanged` can run it too. A modifier pressed in the middle of a drag has to take hold where the hand already is — ⇧ that only straightened the line after a further nudge of the mouse is the same complaint as a bone handle that appears only once you let go. `flagsChanged` carries no position of its own, so the pointer is re-read rather than remembered.
 - ⇧ on something already selected now waits for the release to decide what it meant. It is two intentions that are identical at the moment of the press: a click, which drops that layer from the selection, or the start of a drag held straight. Dropping it at once left ⇧-drag dragging everything *except* the thing under the pointer — so the drop happens on release, and only if the hand never moved. Figma draws the same distinction.
 - Checked by measurement, not by eye. A pen path drawn with ⇧ came back out of the saved file at 0.000°, −90.000°, 45.000° and 90.000°; a ⇧-locked move of a 45-anchor blob came back at dx 200.456, dy 0.000. The mid-drag case was the one worth watching rather than measuring: the shape snapped back onto its row the instant ⇧ went down, with the mouse stationary.
+
+---
+
+## 10 October — no version
+
+*re-Flip becomes Flip*
+
+A name and an icon, not a feature, so it is here and not in the app's own list.
+
+- The original Flip was archived to `Claude Code/Archive/Flip v1`, and this project took its place: the folder, the GitHub repository (`inbox-nidhinm/Flip`), the window title, the home screen, the first onboarding page and the README all say Flip now.
+- The icon went back to the original green one. The dark version only ever meant "this is the development build", and there is no longer a second build to tell it apart from.
+- The app took the original's identifier, `ai.flip.app`, so it inherits Flip's settings rather than starting fresh as a stranger.
+- One creations folder instead of two. The default is `~/Documents/Flip Creations` again, and the three drawings from `re-Flip Creations` were moved in beside the originals. The comment that kept the two apart, written so that a new engine could not reach old drawings, was rewritten: with one app left, there is nothing to keep apart.

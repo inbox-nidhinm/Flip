@@ -7,7 +7,7 @@ struct FlipApp: App {
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        Window("re-Flip", id: "main") {
+        Window("Flip", id: "main") {
             ContentView()
                 .environmentObject(model)
                 .frame(minWidth: 980, minHeight: 660)
