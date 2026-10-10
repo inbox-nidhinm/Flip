@@ -496,3 +496,21 @@ A name and an icon, not a feature, so it is here and not in the app's own list.
 - The app took the original's identifier, `ai.flip.app`, so it inherits Flip's settings rather than starting fresh as a stranger.
 - One creations folder instead of two. The default is `~/Documents/Flip Creations` again, and the three drawings from `re-Flip Creations` were moved in beside the originals. The comment that kept the two apart, written so that a new engine could not reach old drawings, was rewritten: with one app left, there is nothing to keep apart.
 - Flip's code moved from the Unlicense to the MIT License, as Twine and Pine did the same day. The README's License section says so; Colorful and Montagu Slab keep their own terms.
+
+*The traffic lights, Twine's way*
+
+Not a feature: the buttons were already in the panel's corner, and this keeps
+them there more reliably. So it is here and not in the app's own list.
+
+- `TrafficLights` now works the way Twine's does. Each window's close, minimise and zoom buttons are watched for frame changes, and when AppKit moves them back to its own corner they are put back at (20, 20) a turn later, once per burst of changes, giving up after three tries that do not stick.
+- The old version only corrected them on resize, becoming key and leaving full screen, and did it straight from the notification. That missed every other time AppKit lays the title bar out again, and correcting synchronously from inside AppKit's layout is what recursed until Twine crashed.
+- SwiftUI builds Flip's window, so there is no one place to start watching it as it is made. Every window is picked up when the app finishes launching and again whenever one comes to the front or leaves full screen; only the first call per window starts watching, the later ones reset the give-up count.
+- Checked on a separate copy with its own identifier, so the open Flip was left alone: the close button's dot landed at 21 by 22 points, which is the button's frame at exactly 20 by 20.
+
+*The glossy traffic lights, and a close button that closes*
+
+Still not a feature, so still only here.
+
+- The lights were flat where Twine's are glossy. AppKit draws an app the way the macOS it says it was built for drew it, and SwiftPM stamps Flip as built for macOS 15, its oldest supported system, even though it builds with the macOS 27 SDK. Twine is built by Xcode and stamped 27. `make-app.sh` now asks `xcrun` for the SDK version and passes it to the linker, so Flip is stamped with the real SDK and still runs on 15. A plain `swift build` does not do this, so a build run that way still has the old lights.
+- The close button only worked when hit in its middle. AppKit's title bar is shorter than 20 points down plus a button (28 points under the macOS 15 stamp, 32 under 27), so the buttons hung out of the bottom of it, and AppKit only finds a button for a click inside the view holding it. Under the 15 stamp half of each button hung out. `TrafficLights` now watches for presses on the part that hangs out and clicks the button itself. Handing the press to the button to run did not work: it could not find itself under the pointer either, and let go without acting.
+- Checked on a separate copy: a press 1 point above the button's bottom edge, outside the title bar, closed the window; before the change the same press went to the home screen behind it. A press in the middle still goes to AppKit as before. The lights were looked at in a screenshot of the same copy and are the glossy ones.

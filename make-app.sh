@@ -6,8 +6,15 @@ set -euo pipefail
 cd "$(dirname "$0")"
 CONFIG="${1:-release}"
 
-swift build -c "$CONFIG"
-BIN="$(swift build -c "$CONFIG" --show-bin-path)/Flip"
+# SwiftPM stamps the binary as built for its oldest supported macOS (15)
+# rather than the SDK it was built with, and AppKit draws an app as the macOS
+# it says it was built for: the flat traffic lights of 15 instead of the glossy
+# ones Twine has. This stamps the real SDK version and keeps 15 as the oldest.
+SDK_VERSION="$(xcrun --show-sdk-version)"
+LINK=(-Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$SDK_VERSION")
+
+swift build -c "$CONFIG" "${LINK[@]}"
+BIN="$(swift build -c "$CONFIG" "${LINK[@]}" --show-bin-path)/Flip"
 
 # Recompose the icon if the artwork is newer than the built .icns. Building
 # without artwork is fine — the app just takes the generic icon.

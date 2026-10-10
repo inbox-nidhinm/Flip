@@ -169,29 +169,112 @@ struct FlipApp: App {
 /// as sitting on nothing. Moved in by the panel's own inset plus its own
 /// padding, they land where any other control in that panel would.
 ///
-/// Reapplied on resize and on becoming key, because AppKit lays them out again
-/// on both and would otherwise put them straight back.
+/// The same as Twine's. AppKit lays the buttons out again whenever the title
+/// bar changes: on resize, on becoming key, on leaving full screen. So
+/// `keepPlaced` watches the buttons' frames and puts them back. It does that a
+/// turn later rather than from inside AppKit's own layout, once per burst of
+/// changes, and gives up after a few tries that do not stick. Moving them
+/// synchronously from the notification is what recursed until Twine crashed.
+///
+/// AppKit's title bar is shorter than 20 points down plus a button (32 points
+/// tall on macOS 27, 28 before it), so the buttons hang out of the bottom of
+/// it, and AppKit only finds a button for a click inside the view holding it.
+/// `passClicksToButtons` hands those clicks over, or only the top of each
+/// button answered and the close button had to be hit in its middle.
 @MainActor
 enum TrafficLights {
     /// `floatInset` + the padding every panel gives its contents.
     static let origin = CGPoint(x: 20, y: 20)
 
-    static func place() {
-        for window in NSApplication.shared.windows { place(in: window) }
+    private static var watched: Set<ObjectIdentifier> = []
+    private static var pending: Set<ObjectIdentifier> = []
+    private static var misses: [ObjectIdentifier: Int] = [:]
+
+    /// SwiftUI makes the windows, so there is no one place to call this from
+    /// as each is built: it is called for every window the app has, and for
+    /// each one only the first call starts watching.
+    static func keepPlaced(in window: NSWindow) {
+        guard watched.insert(ObjectIdentifier(window)).inserted else { return }
+        passClicksToButtons()
+        for button in buttons(of: window) {
+            button.postsFrameChangedNotifications = true
+            NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: button,
+                                                   queue: .main) { [weak window] _ in
+                MainActor.assumeIsolated {
+                    if let window { schedule(window) }
+                }
+            }
+        }
+        schedule(window)
     }
 
-    static func place(in window: NSWindow) {
-        let kinds: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
-        let buttons = kinds.compactMap { window.standardWindowButton($0) }
-        guard let close = buttons.first, let bar = close.superview else { return }
+    private static var clickMonitor: Any?
+
+    /// A press on a button that AppKit would give to whatever is under it,
+    /// because it is on the part of the button below the title bar, clicks
+    /// the button instead. It clicks it outright: handed the press to run
+    /// itself, the button could not find itself under the pointer either, and
+    /// let go without acting.
+    private static func passClicksToButtons() {
+        guard clickMonitor == nil else { return }
+        clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
+            let handled = MainActor.assumeIsolated { pressButton(under: event) }
+            return handled ? nil : event
+        }
+    }
+
+    /// Returns true if the press went to a button.
+    private static func pressButton(under event: NSEvent) -> Bool {
+        guard let window = event.window else { return false }
+        for button in buttons(of: window) where button.isEnabled && !button.isHidden {
+            guard button.bounds.contains(button.convert(event.locationInWindow, from: nil)) else { continue }
+            // The window's frame view has no superview, so it takes window
+            // coordinates as they are.
+            if let hit = window.contentView?.superview?.hitTest(event.locationInWindow),
+               hit.isDescendant(of: button) { return false }
+            button.performClick(nil)
+            return true
+        }
+        return false
+    }
+
+    private static func buttons(of window: NSWindow) -> [NSButton] {
+        [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].compactMap { window.standardWindowButton($0) }
+    }
+
+    private static func schedule(_ window: NSWindow) {
+        let key = ObjectIdentifier(window)
+        guard !pending.contains(key), misses[key, default: 0] < 3 else { return }
+        pending.insert(key)
+        DispatchQueue.main.async { [weak window] in
+            pending.remove(key)
+            guard let window else { return }
+            if place(in: window) { misses[key] = 0 } else { misses[key, default: 0] += 1 }
+        }
+    }
+
+    /// Resets the give-up count, for events after which placing should work
+    /// again, such as the window coming to the front or leaving full screen.
+    static func retry(in window: NSWindow) {
+        keepPlaced(in: window)
+        misses[ObjectIdentifier(window)] = 0
+        schedule(window)
+    }
+
+    /// Returns true if the buttons are where they belong afterwards.
+    @discardableResult
+    private static func place(in window: NSWindow) -> Bool {
+        let buttons = buttons(of: window)
+        guard let close = buttons.first, let bar = close.superview, bar.frame.height > origin.y else { return false }
         // The titlebar view is not flipped, so "down the screen" is a smaller y.
         let wantedMaxY = bar.frame.height - origin.y
         let dy = wantedMaxY - close.frame.maxY
         let dx = origin.x - close.frame.minX
-        guard abs(dx) > 0.5 || abs(dy) > 0.5 else { return }
+        if abs(dx) <= 0.5 && abs(dy) <= 0.5 { return true }
         for b in buttons {
             b.setFrameOrigin(CGPoint(x: b.frame.minX + dx, y: b.frame.minY + dy))
         }
+        return abs(close.frame.minX - origin.x) <= 0.5 && abs(close.frame.maxY - wantedMaxY) <= 0.5
     }
 }
 
@@ -199,14 +282,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
-        // The window is not up yet at this point, and AppKit lays the buttons
-        // out again after it is — so this waits a turn rather than running now
-        // and being undone.
-        DispatchQueue.main.async { TrafficLights.place() }
-        for name in [NSWindow.didResizeNotification, NSWindow.didBecomeKeyNotification,
-                     NSWindow.didExitFullScreenNotification] {
-            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in
-                MainActor.assumeIsolated { TrafficLights.place() }
+        // The window is not up yet at this point, so this waits a turn. After
+        // that, a window coming to the front or out of full screen starts it
+        // being watched if it is new, and gives placing another go if not.
+        DispatchQueue.main.async {
+            for window in NSApplication.shared.windows { TrafficLights.retry(in: window) }
+        }
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didExitFullScreenNotification] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { note in
+                MainActor.assumeIsolated {
+                    if let window = note.object as? NSWindow { TrafficLights.retry(in: window) }
+                }
             }
         }
     }
