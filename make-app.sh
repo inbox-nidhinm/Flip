@@ -13,6 +13,10 @@ CONFIG="${1:-release}"
 SDK_VERSION="$(xcrun --show-sdk-version)"
 LINK=(-Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$SDK_VERSION")
 
+# The title face: refreshed from the AA Bridge submodule when it is checked out,
+# otherwise the copy committed in Sources/Flip/Fonts is used as it is.
+Tools/update-fonts.sh
+
 swift build -c "$CONFIG" "${LINK[@]}"
 BIN="$(swift build -c "$CONFIG" "${LINK[@]}" --show-bin-path)/Flip"
 

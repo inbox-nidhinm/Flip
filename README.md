@@ -117,14 +117,27 @@ Press `⌘/` in the app for the same list.
 into `Sources/Flip/Vendor/Colorful` rather than fetched, so the build works
 offline. Local changes are listed in `VENDOR.md` beside it.
 
+AA Bridge Slab, the title face, built from
 [Montagu Slab](https://github.com/floriankarsten/montagu-slab) by Florian
-Karsten, SIL Open Font License 1.1. Bundled at
-`Sources/Flip/Fonts`, with the licence beside it in `OFL.txt`.
+Karsten. SIL Open Font License 1.1, like the face it comes from. Flip uses one
+file of it, the 16pt Light, bundled at `Sources/Flip/Fonts` with the licence
+beside it in `OFL.txt`.
+
+AA Bridge lives in a repository of its own, linked here as a Git submodule at
+`Vendor/AA-Bridge`. A submodule is a pointer to one exact version of another
+repository. That repository is private for now, so the two files Flip needs
+are also kept in this one, and you do not need the submodule to build Flip: a
+plain clone builds as it is.
+
+If you do have access, `git submodule update --init` fetches it. From then on
+`make-app.sh` copies the font and licence from it before each build (the copy
+is done by `Tools/update-fonts.sh`, which can also be run on its own). Without
+the submodule that step is skipped and the copies already here are used.
 
 ## License
 
 [MIT](LICENSE).
 
 That covers this project's code only. The bundled dependencies above stay under
-their own terms: Colorful under MIT, and Montagu Slab under the SIL Open Font
+their own terms: Colorful under MIT, and AA Bridge Slab under the SIL Open Font
 License, which requires the font keep that licence wherever it goes.

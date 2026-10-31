@@ -104,11 +104,19 @@ extension Color {
 /// system face when the name is unknown, so a font that failed to load costs a
 /// different-looking title rather than a crash.
 enum FlipFont {
-    /// The PostScript name, which is what `Font.custom` matches on — not the
-    /// family, which for this face is "Montagu Slab 48pt" with the weight held
+    /// AA Bridge Slab Light, in its 16pt optical size: the cut drawn for text,
+    /// with the sturdier hairlines and looser spacing that suit titles at 20
+    /// to 24 points. The display cut is drawn for 144 and sets cramped this
+    /// small. One static file rather than the variable font, because every
+    /// title sits in that one narrow band of sizes, where the variable font's
+    /// optical size would land on this same cut anyway.
+    ///
+    /// The PostScript name, which is what `Font.custom` matches on, not the
+    /// family, which for this face is "AA Bridge Slab 16pt" with the weight held
     /// apart. The file beside it is named to match, because the lookup below
-    /// asks for the resource under this same string.
-    private static let face = "MontaguSlab48pt-Light"
+    /// asks for the resource under this same string. It is copied in from the
+    /// AA Bridge submodule by `Tools/update-fonts.sh`.
+    private static let face = "AABridgeSlab16pt-Light"
 
     private static let registered: Bool = {
         guard let url = Bundle.module.url(forResource: face,
@@ -127,7 +135,7 @@ enum FlipFont {
     ///
     /// SwiftUI has no line-height control; `lineSpacing` is the gap *added*
     /// between lines, so the figure depends on how tall the face already sets
-    /// itself — which for Montagu Slab is not 1em and is not the system font's
+    /// itself, which for AA Bridge Slab is not 1em and is not the system font's
     /// either.
     /// Asked of the font rather than guessed, so a change of face does not
     /// quietly change the leading with it.

@@ -514,3 +514,19 @@ Still not a feature, so still only here.
 - The lights were flat where Twine's are glossy. AppKit draws an app the way the macOS it says it was built for drew it, and SwiftPM stamps Flip as built for macOS 15, its oldest supported system, even though it builds with the macOS 27 SDK. Twine is built by Xcode and stamped 27. `make-app.sh` now asks `xcrun` for the SDK version and passes it to the linker, so Flip is stamped with the real SDK and still runs on 15. A plain `swift build` does not do this, so a build run that way still has the old lights.
 - The close button only worked when hit in its middle. AppKit's title bar is shorter than 20 points down plus a button (28 points under the macOS 15 stamp, 32 under 27), so the buttons hung out of the bottom of it, and AppKit only finds a button for a click inside the view holding it. Under the 15 stamp half of each button hung out. `TrafficLights` now watches for presses on the part that hangs out and clicks the button itself. Handing the press to the button to run did not work: it could not find itself under the pointer either, and let go without acting.
 - Checked on a separate copy: a press 1 point above the button's bottom edge, outside the title bar, closed the window; before the change the same press went to the home screen behind it. A press in the middle still goes to AppKit as before. The lights were looked at in a screenshot of the same copy and are the glossy ones.
+
+---
+
+## 31 October: no version
+
+*AA Bridge Slab for the titles*
+
+A change of face, not a feature, so it is here and not in the app's own list.
+
+- The titles (the home screen's Flip, All Projects and Settings, the onboarding pages and the build headings in version history) are set in AA Bridge Slab Light in place of Montagu Slab Light. AA Bridge Slab is Nidhin's own face, built from Montagu Slab, so the letters are close; Pine and Twine are moving to it as well. It was first called Trupeer Slab and was renamed AA Bridge Slab before this reached `main`.
+- It comes in two optical sizes, a display cut drawn for 144 points and a text cut drawn for 16. Flip's titles all sit between 20 and 24 points, so they take the 16pt cut: the display cut sets about 9% narrower and visibly cramped at that size. The variable font was passed over because its optical size, set to the size each title is drawn at, would land on the same 16pt cut anyway, for five times the file and more code.
+- One constant and one file, the same as every swap before it: the loader matches on the PostScript name `AABridgeSlab16pt-Light` and looks the file up under that string. The leading is measured from the face, and the two faces have the same height, so the 130% line spacing did not move.
+- The 16pt cut sets about 3% wider than Montagu's 48pt one did. The first onboarding sentence now breaks over four lines instead of three; the others keep their line count. Every character Montagu Slab had, AA Bridge Slab has.
+- A new dependency: AA Bridge, the repository the face is made in, is linked as a Git submodule at `Vendor/AA-Bridge`, pinned to one commit. `Tools/update-fonts.sh` copies the 16pt Light file and `OFL.txt` from it into `Sources/Flip/Fonts`, and `make-app.sh` runs it before every build. AA Bridge is private while Flip will be public, so those two files stay committed here as well: without the submodule the script does nothing and the build uses them. `Vendor/` is outside the one SwiftPM target, so SwiftPM does not look at it.
+- `OFL.txt` is the one that ships with AA Bridge Slab, and the README credits it as built from Montagu Slab and explains the submodule.
+- Checked on a separate copy with its own identifier and an empty folder of its own, so Nidhin's own Flip and its drawings were left alone. The running copy had the bundled AA Bridge Slab file open, and the titles in its screenshots are in it, not the system face.
