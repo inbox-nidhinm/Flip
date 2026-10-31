@@ -519,13 +519,14 @@ Still not a feature, so still only here.
 
 ## 31 October: no version
 
-*Trupeer Slab for the titles*
+*AA Bridge Slab for the titles*
 
 A change of face, not a feature, so it is here and not in the app's own list.
 
-- The titles (the home screen's Flip, All Projects and Settings, the onboarding pages and the build headings in version history) are set in Trupeer Slab Light in place of Montagu Slab Light. Trupeer Slab is built from Montagu Slab, so the letters are close; Pine and Twine are moving to it as well.
+- The titles (the home screen's Flip, All Projects and Settings, the onboarding pages and the build headings in version history) are set in AA Bridge Slab Light in place of Montagu Slab Light. AA Bridge Slab is Nidhin's own face, built from Montagu Slab, so the letters are close; Pine and Twine are moving to it as well. It was first called Trupeer Slab and was renamed AA Bridge Slab before this reached `main`.
 - It comes in two optical sizes, a display cut drawn for 144 points and a text cut drawn for 16. Flip's titles all sit between 20 and 24 points, so they take the 16pt cut: the display cut sets about 9% narrower and visibly cramped at that size. The variable font was passed over because its optical size, set to the size each title is drawn at, would land on the same 16pt cut anyway, for five times the file and more code.
-- One constant and one file, the same as every swap before it: the loader matches on the PostScript name `TrupeerSlab16pt-Light` and looks the file up under that string. The leading is measured from the face, and the two faces have the same height, so the 130% line spacing did not move.
-- The 16pt cut sets about 3% wider than Montagu's 48pt one did. The first onboarding sentence now breaks over four lines instead of three; the others keep their line count. Every character Montagu Slab had, Trupeer Slab has.
-- `OFL.txt` is the one that ships with Trupeer Slab, and the README credits it as built from Montagu Slab.
-- Checked on a separate copy with its own identifier and an empty folder of its own, so the open Flip and its drawings were left alone. The running copy had the bundled Trupeer Slab file open, and the titles in its screenshots are in it, not the system face.
+- One constant and one file, the same as every swap before it: the loader matches on the PostScript name `AABridgeSlab16pt-Light` and looks the file up under that string. The leading is measured from the face, and the two faces have the same height, so the 130% line spacing did not move.
+- The 16pt cut sets about 3% wider than Montagu's 48pt one did. The first onboarding sentence now breaks over four lines instead of three; the others keep their line count. Every character Montagu Slab had, AA Bridge Slab has.
+- A new dependency: AA Bridge, the repository the face is made in, is linked as a Git submodule at `Vendor/AA-Bridge`, pinned to one commit. `Tools/update-fonts.sh` copies the 16pt Light file and `OFL.txt` from it into `Sources/Flip/Fonts`, and `make-app.sh` runs it before every build. AA Bridge is private while Flip will be public, so those two files stay committed here as well: without the submodule the script does nothing and the build uses them. `Vendor/` is outside the one SwiftPM target, so SwiftPM does not look at it.
+- `OFL.txt` is the one that ships with AA Bridge Slab, and the README credits it as built from Montagu Slab and explains the submodule.
+- Checked on a separate copy with its own identifier and an empty folder of its own, so Nidhin's own Flip and its drawings were left alone. The running copy had the bundled AA Bridge Slab file open, and the titles in its screenshots are in it, not the system face.
