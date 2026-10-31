@@ -117,8 +117,9 @@ Press `⌘/` in the app for the same list.
 into `Sources/Flip/Vendor/Colorful` rather than fetched, so the build works
 offline. Local changes are listed in `VENDOR.md` beside it.
 
+Trupeer Slab, the title face, built from
 [Montagu Slab](https://github.com/floriankarsten/montagu-slab) by Florian
-Karsten, SIL Open Font License 1.1. Bundled at
+Karsten. SIL Open Font License 1.1, like the face it comes from. Bundled at
 `Sources/Flip/Fonts`, with the licence beside it in `OFL.txt`.
 
 ## License
@@ -126,5 +127,5 @@ Karsten, SIL Open Font License 1.1. Bundled at
 [MIT](LICENSE).
 
 That covers this project's code only. The bundled dependencies above stay under
-their own terms: Colorful under MIT, and Montagu Slab under the SIL Open Font
+their own terms: Colorful under MIT, and Trupeer Slab under the SIL Open Font
 License, which requires the font keep that licence wherever it goes.
